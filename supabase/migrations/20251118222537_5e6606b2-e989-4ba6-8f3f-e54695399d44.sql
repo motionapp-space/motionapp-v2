@@ -1,5 +1,5 @@
 -- Create library_media table for media metadata
-CREATE TABLE library_media (
+CREATE TABLE IF NOT EXISTS library_media (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   coach_id uuid NOT NULL REFERENCES coaches(id) ON DELETE CASCADE,
   filename text NOT NULL,
@@ -13,11 +13,12 @@ CREATE TABLE library_media (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_library_media_coach_id ON library_media(coach_id);
-CREATE INDEX idx_library_media_file_type ON library_media(file_type);
-CREATE INDEX idx_library_media_tags ON library_media USING gin(tags);
+CREATE INDEX IF NOT EXISTS idx_library_media_coach_id ON library_media(coach_id);
+CREATE INDEX IF NOT EXISTS idx_library_media_file_type ON library_media(file_type);
+CREATE INDEX IF NOT EXISTS idx_library_media_tags ON library_media USING gin(tags);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_library_media_updated_at ON library_media;
 CREATE TRIGGER update_library_media_updated_at
   BEFORE UPDATE ON library_media
   FOR EACH ROW
@@ -27,18 +28,22 @@ CREATE TRIGGER update_library_media_updated_at
 ALTER TABLE library_media ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+DROP POLICY IF EXISTS "Coaches can view their own media" ON library_media;
 CREATE POLICY "Coaches can view their own media"
   ON library_media FOR SELECT
   USING (coach_id = auth.uid());
 
+DROP POLICY IF EXISTS "Coaches can insert their own media" ON library_media;
 CREATE POLICY "Coaches can insert their own media"
   ON library_media FOR INSERT
   WITH CHECK (coach_id = auth.uid());
 
+DROP POLICY IF EXISTS "Coaches can update their own media" ON library_media;
 CREATE POLICY "Coaches can update their own media"
   ON library_media FOR UPDATE
   USING (coach_id = auth.uid());
 
+DROP POLICY IF EXISTS "Coaches can delete their own media" ON library_media;
 CREATE POLICY "Coaches can delete their own media"
   ON library_media FOR DELETE
   USING (coach_id = auth.uid());
@@ -49,6 +54,7 @@ VALUES ('media_library', 'media_library', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for media_library bucket
+DROP POLICY IF EXISTS "Coaches can upload to their folder" ON storage.objects;
 CREATE POLICY "Coaches can upload to their folder"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -56,6 +62,7 @@ CREATE POLICY "Coaches can upload to their folder"
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Coaches can view their files" ON storage.objects;
 CREATE POLICY "Coaches can view their files"
   ON storage.objects FOR SELECT
   USING (
@@ -63,6 +70,7 @@ CREATE POLICY "Coaches can view their files"
     AND auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Coaches can delete their files" ON storage.objects;
 CREATE POLICY "Coaches can delete their files"
   ON storage.objects FOR DELETE
   USING (

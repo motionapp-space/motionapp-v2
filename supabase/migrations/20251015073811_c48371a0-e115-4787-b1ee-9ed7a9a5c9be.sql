@@ -1,3 +1,6 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SET search_path = public, extensions;
+
 -- Create coaches table (linked to auth.users)
 CREATE TABLE public.coaches (
   id UUID PRIMARY KEY DEFAULT auth.uid(),
